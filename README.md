@@ -1,5 +1,7 @@
 # Go-Mesoslog
 
+[![Build Status](https://travis-ci.org/gondor/go-mesoslog.svg)](https://travis-ci.org/gondor/go-mesoslog)
+
 ## Overview
 
 Go-Mesoslog makes it easy to grab StdOut and StdErr logs from any task.  It allows you to find logs using the name of the task without the UUID portion.  Go-Mesoslog locates the logs via the master and then downloads the desired log from the allocated slave.
@@ -35,6 +37,10 @@ To update Go-Mesoslog's dependencies, use `go get` with the `-u` option.
 Ideally in your larger clusters you should be log forwarding via Syslog, GELF, FluentD, etc but for smaller deployments where this isn't setup such as DEV or TEST environments this offers a quick view without exposing all of your cluster characteristics to the teams.
 
 I wrote this quickly in one night to solve a few use cases.  Feel free to fork and contribute!
+
+## Looking for Mesos/Marathon, Kubernetes or ECS deployment strategies?
+
+Checkout my other project [DepCon](https://github.com/gondor/depcon)
 
 ## License
 
