@@ -11,7 +11,9 @@ import (
 )
 
 const (
+	// StdErrFlag is a flag to output stderr logs vs stdout if true
 	StdErrFlag string = "stderr"
+	// MasterFlag is the mesos master host:port flag
 	MasterFlag string = "master"
 )
 
@@ -89,12 +91,12 @@ func listApps(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s", err.Error())
 		return
 	}
-	w := NewTabWriter(os.Stdout)
+	w := newTabWriter(os.Stdout)
 	fmt.Fprintf(w, "\nAPP_ID\tINSTANCES\n")
 	for k, v := range apps {
 		fmt.Fprintf(w, "%s\t%v\n", k, v)
 	}
-	FlushWriter(w)
+	flushWriter(w)
 }
 
 func getLogType() LogType {
@@ -108,7 +110,7 @@ func getLogType() LogType {
 
 func client() *MesosClient {
 	var host string
-	var port int = 5050
+	var port = 5050
 	if master, err := rootCmd.PersistentFlags().GetString(MasterFlag); err != nil {
 		printErr(err)
 		os.Exit(1)
@@ -142,12 +144,12 @@ func printErr(err error) {
 	fmt.Printf("\nError: %s\n", err.Error())
 }
 
-func FlushWriter(w *tabwriter.Writer) {
+func flushWriter(w *tabwriter.Writer) {
 	fmt.Fprintln(w, "")
 	w.Flush()
 }
 
-func NewTabWriter(output io.Writer) *tabwriter.Writer {
+func newTabWriter(output io.Writer) *tabwriter.Writer {
 	w := new(tabwriter.Writer)
 	w.Init(output, 0, 8, 2, '\t', 0)
 	return w

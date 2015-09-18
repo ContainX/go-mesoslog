@@ -1,9 +1,12 @@
 package main
 
+// LogType - enumeration of STDOUT or STDERR
 type LogType int
 
 const (
+	// STDOUT - requests the stdout log from Mesos
 	STDOUT LogType = 1 + iota
+	// STDERR - requests the stderr log from Mesos
 	STDERR
 )
 
@@ -17,26 +20,26 @@ func (l LogType) String() string {
 }
 
 type masterState struct {
-	Frameworks []*mstateFramework `json:",frameworks"`
-	Slaves     []*mstateSlave     `json:",slaves"`
+	Frameworks []*mstateFramework `json:"frameworks"`
+	Slaves     []*mstateSlave     `json:"slaves"`
 }
 
 type mstateFramework struct {
-	Tasks []*mstateTask `json:",tasks"`
+	Tasks []*mstateTask `json:"tasks"`
 }
 
 type mstateSlave struct {
-	ID       string `json:",id"`
-	Hostname string `json:",hostname"`
-	Pid      string `json:",pid"`
+	ID       string `json:"id"`
+	Hostname string `json:"hostname"`
+	Pid      string `json:"pid"`
 }
 
 type mstateTask struct {
-	ID           string `json:",id"`
-	Framework_ID string `json:",framework_id"`
-	Executor_ID  string `json:",executor_id"`
-	Slave_ID     string `json:",slave_id"`
-	Name         string `json:",name"`
+	ID          string `json:"id"`
+	FrameworkID string `json:"framework_id"`
+	ExecutorID  string `json:"executor_id"`
+	SlaveID     string `json:"slave_id"`
+	Name        string `json:"name"`
 }
 
 type slaveState struct {
@@ -45,17 +48,22 @@ type slaveState struct {
 }
 
 type sstateFramework struct {
-	ID        string            `json:",id"`
-	Executors []*sstateExecutor `json:",executors"`
+	ID        string            `json:"id"`
+	Executors []*sstateExecutor `json:"executors"`
 }
 
 type sstateExecutor struct {
-	ID        string `json:",id"`
-	Directory string `json:",directory"`
+	ID        string `json:"id"`
+	Directory string `json:"directory"`
 }
 
+// LogOut - struct which holds the result from getting Mesos logs
+//
 type LogOut struct {
-	AppID  string
+	// AppID - the task name / application identifier
+	AppID string
+	// TaskID - the task identifier
 	TaskID string
-	Log    string
+	// Log - filename of the outputted log when in download more or RAW log if request is to print to stdout
+	Log string
 }

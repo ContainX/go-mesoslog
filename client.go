@@ -15,6 +15,7 @@ import (
 	"strings"
 )
 
+// MesosClient holds state about the current Master node.  Allows method receivers to obtain these values
 type MesosClient struct {
 	Host      string
 	Port      int
@@ -22,6 +23,9 @@ type MesosClient struct {
 	State     *masterState
 }
 
+// NewMesosClient - Creates a new MesosClient
+// {host} - the host/ip of the mesos master node
+// {port} - the port # of the mesos master node
 func NewMesosClient(host string, port int) (*MesosClient, error) {
 	masterURL, err := getMasterRedirect(host, port)
 	if err != nil {
@@ -35,6 +39,7 @@ func NewMesosClient(host string, port int) (*MesosClient, error) {
 	return &MesosClient{Host: host, Port: port, MasterURL: masterURL, State: state}, nil
 }
 
+// GetAppNames - List all unique app names aka task names running in the Mesos cluster
 func (c *MesosClient) GetAppNames() (map[string]int, error) {
 	apps := findApps(c.State)
 	if apps == nil || len(apps) == 0 {
@@ -43,8 +48,12 @@ func (c *MesosClient) GetAppNames() (map[string]int, error) {
 	return apps, nil
 }
 
+// GetLog - Gets/Downloads logs for a [appID]
+// {appID} - the task name / app identifier
+// {logtype} - the desired log type STDOUT | STDERR
+// {dir} - optional output dir which is used to download vs stdout
 func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogOut, error) {
-	result := make([]*LogOut, 0)
+	var result []*LogOut
 	tasks := findTask(c.State, appID)
 	if tasks == nil || len(tasks) == 0 {
 		return nil, fmt.Errorf("application could not be found")
@@ -52,7 +61,7 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 
 	for _, task := range tasks {
 
-		slaveID := task.Slave_ID
+		slaveID := task.SlaveID
 		slave := findSlave(c.State, slaveID)
 		if slave == nil {
 			return nil, fmt.Errorf("invalid state.json; referenced slave not present")
@@ -67,8 +76,8 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 			return nil, err
 		}
 
-		fID := task.Framework_ID
-		eID := task.Executor_ID
+		fID := task.FrameworkID
+		eID := task.ExecutorID
 		directory := findDirectory(slaveState, fID, task.ID, eID)
 		if directory == "" {
 			return nil, fmt.Errorf("couldn't locate directory on slave")
@@ -150,6 +159,7 @@ func findApps(state *masterState) map[string]int {
 
 func findSlave(state *masterState, slaveID string) *mstateSlave {
 	for _, slave := range state.Slaves {
+		fmt.Printf("%s = %s\n", slave.ID, slaveID)
 		if slave.ID == slaveID {
 			return slave
 		}
@@ -229,16 +239,16 @@ func download(slaveURL string, resource string, filename string) (string, error)
 	if filename != "" {
 		if e := writeFile(filename, resp.Body); e != nil {
 			return "", e
-		} else {
-			return filename, nil
 		}
-	} else {
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return "", err
-		}
-		return string(data), nil
+		return filename, nil
 	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+
 }
 
 func writeFile(filename string, r io.Reader) error {
