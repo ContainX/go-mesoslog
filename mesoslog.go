@@ -5,9 +5,9 @@ import (
 	"github.com/spf13/cobra"
 	"io"
 	"os"
-	"text/tabwriter"
-	"strings"
 	"strconv"
+	"strings"
+	"text/tabwriter"
 )
 
 const (

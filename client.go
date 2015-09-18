@@ -6,13 +6,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"os"
 	"path/filepath"
-	"io"
+	"strings"
 )
 
 type MesosClient struct {
@@ -229,7 +229,7 @@ func download(slaveURL string, resource string, filename string) (string, error)
 	if filename != "" {
 		if e := writeFile(filename, resp.Body); e != nil {
 			return "", e
- 		} else {
+		} else {
 			return filename, nil
 		}
 	} else {
