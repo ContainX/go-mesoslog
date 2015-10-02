@@ -15,6 +15,8 @@ const (
 	StdErrFlag string = "stderr"
 	// MasterFlag is the mesos master host:port flag
 	MasterFlag string = "master"
+	// DurationFlag is how often to poll in seconds
+	DurationFlag string = "duration"
 )
 
 var rootCmd = &cobra.Command{
@@ -31,6 +33,12 @@ var printCmd = &cobra.Command{
 	Run:   printLog,
 }
 
+var tailCmd = &cobra.Command{
+	Use:   "tail [appID]",
+	Short: "Tails logs [appId] to StdOut.  Each running instance/task log will be outputed",
+	Run:   tailLog,
+}
+
 var fileCmd = &cobra.Command{
 	Use:   "file [appID] [output_dir]",
 	Short: "Outputs the log for the given [appId] to a file. Multiple files will be created (1 per running instance)",
@@ -41,6 +49,14 @@ var appsCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List current application id's and task count (instances running)",
 	Run:   listApps,
+}
+
+func main() {
+	rootCmd.PersistentFlags().Bool(StdErrFlag, false, "Output stderr log instead of default stdout")
+	rootCmd.PersistentFlags().StringP(MasterFlag, "m", "", "Mesos Master host:port (eg. 192.168.2.1:5050)")
+	tailCmd.Flags().IntP(DurationFlag, "d", 5, "Log poll time (duration) in seconds")
+	rootCmd.AddCommand(appsCmd, printCmd, tailCmd, fileCmd)
+	rootCmd.Execute()
 }
 
 func printLog(cmd *cobra.Command, args []string) {
@@ -62,11 +78,18 @@ func printLog(cmd *cobra.Command, args []string) {
 	}
 }
 
-func main() {
-	rootCmd.PersistentFlags().Bool(StdErrFlag, false, "Output stderr log instead of default stdout")
-	rootCmd.PersistentFlags().StringP(MasterFlag, "m", "", "Mesos Master host:port (eg. 192.168.2.1:5050)")
-	rootCmd.AddCommand(appsCmd, printCmd, fileCmd)
-	rootCmd.Execute()
+func tailLog(cmd *cobra.Command, args []string) {
+	if len(args) < 1 {
+		cmd.Usage()
+		fmt.Println("ERROR: An [appId] must be specified")
+		return
+	}
+	duration, _ := cmd.Flags().GetInt(DurationFlag)
+	err := client().TailLog(args[0], getLogType(), duration)
+	if err != nil {
+		fmt.Printf("%s", err.Error())
+		return
+	}
 }
 
 func fileLog(cmd *cobra.Command, args []string) {

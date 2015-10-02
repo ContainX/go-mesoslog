@@ -13,6 +13,7 @@ go-mesoslog [global_flags] [action] <action_flags>
 Actions
   list                      - List current application id's and task count (instances running)
   print [appId]             - Outputs the log for the given [appId] to StdOut.  Each running instance log will be outputed
+  tail [appId]              - Tails the log from the given [appId] to StdOut.  All instances are part of the tail
   file [appId] [targetDir]  - Outputs the log for the given [appId] to a files in the [targetDir] prefixed with the instance TaskID
   help                      - Help about any cmmand
 

@@ -57,6 +57,17 @@ type sstateExecutor struct {
 	Directory string `json:"directory"`
 }
 
+type slaveInfo struct {
+	Slave     *mstateSlave
+	State     *slaveState
+	Directory string
+}
+
+type readData struct {
+	Data string `json:"data"`
+	Offset int  `json:"offset"`
+}
+
 // LogOut - struct which holds the result from getting Mesos logs
 //
 type LogOut struct {

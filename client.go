@@ -13,6 +13,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+	"sync"
+	"bytes"
+)
+
+const (
+	// PageLength is the amount of data we want to consume during log tailing
+	PageLength int = 5000
+	TailURIFmt string = "http://%s:5051/files/read.json?path=%s&offset=%v&length=%v"
 )
 
 // MesosClient holds state about the current Master node.  Allows method receivers to obtain these values
@@ -61,41 +70,143 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 
 	for _, task := range tasks {
 
-		slaveID := task.SlaveID
-		slave := findSlave(c.State, slaveID)
-		if slave == nil {
-			return nil, fmt.Errorf("invalid state.json; referenced slave not present")
-		}
-
-		slaveURL, err := constructSlaveURL(slave)
-		if err != nil {
-			return nil, err
-		}
-		slaveState, err := getSlaveState(slaveURL)
+		slaveInfo, err := c.getSlaveInfo(task)
 		if err != nil {
 			return nil, err
 		}
 
-		fID := task.FrameworkID
-		eID := task.ExecutorID
-		directory := findDirectory(slaveState, fID, task.ID, eID)
-		if directory == "" {
-			return nil, fmt.Errorf("couldn't locate directory on slave")
-		}
-
-		url := fmt.Sprintf("http://%s:5051/files/download.json?path=%s/", slave.Hostname, directory)
+		url := fmt.Sprintf("http://%s:5051/files/download.json?path=%s/", slaveInfo.Slave.Hostname, slaveInfo.Directory)
 
 		var filename string
 		if dir != "" {
 			filename = filepath.Join(dir, fmt.Sprintf("%s_%s.txt", task.ID, logtype.String()))
 		}
-		data, err := download(url, logtype.String(), filename)
+		data, err := download(url+logtype.String(), filename)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, &LogOut{TaskID: task.ID, AppID: appID, Log: data})
 	}
 	return result, nil
+}
+
+// TailLog - Tails the logs for a [appID]
+// {appID} - the task name / app identifier
+// {logtype} - the desired log type STDOUT | STDERR
+// {duration} - poll frequency in seconds
+func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error {
+	tasks := findTask(c.State, appID)
+	if tasks == nil || len(tasks) == 0 {
+		return fmt.Errorf("application could not be found")
+	}
+
+	var chans []<-chan string
+	for _, task := range tasks {
+
+		slaveInfo, err := c.getSlaveInfo(task)
+		if err != nil {
+			return err
+		}
+		o := c.asyncTail(task, slaveInfo, logtype, duration)
+		chans = append(chans, o)
+
+	}
+	output := merge(chans...)
+	for {
+		fmt.Print(<-output)
+	}
+	return nil
+}
+
+func (c *MesosClient) asyncTail(task *mstateTask, s *slaveInfo, lt LogType, duration int) <- chan string{
+	ch := make(chan string)
+	path := fmt.Sprintf("%s/%s", s.Directory, lt.String())
+	go func() {
+		offset := 0
+		for {
+			url := fmt.Sprintf(TailURIFmt, s.Slave.Hostname, path, offset, PageLength)
+
+			resp, err := download(url, "")
+			if err != nil {
+				fmt.Printf("Error: %s", err.Error())
+				continue
+			}
+			var rd readData
+			json.Unmarshal([]byte(resp), &rd)
+
+			if len(rd.Data) < 5 {
+				time.Sleep(time.Duration(duration) * time.Second)
+				continue
+			}
+			offset += len(rd.Data)
+			ch <- decorateLog(task.ID, rd.Data)
+		}
+	}()
+	return ch
+}
+
+func merge(cs ...<-chan string) <-chan string {
+	var wg sync.WaitGroup
+	out := make(chan string)
+
+	// Start an output goroutine for each input channel in cs.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c <-chan string) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
+	}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
+func decorateLog(name, data string) string {
+	lines := strings.Split(data, "\n")
+	buf := new(bytes.Buffer)
+	taskIdx := strings.Index(name, ".")
+	dec := name[0:taskIdx]
+	taskId := name[taskIdx+1:]
+	dec = fmt.Sprintf("%s.%s", dec, taskId[0:strings.Index(taskId, "-")])
+	for _, l := range lines {
+		if len(l) > 0 {
+			buf.WriteString(fmt.Sprintf("[%s] %s\n", dec, l))
+		}
+	}
+	return buf.String()
+}
+
+func (c *MesosClient) getSlaveInfo(task *mstateTask) (*slaveInfo, error) {
+	slave := findSlave(c.State, task.SlaveID)
+	if slave == nil {
+		return nil, fmt.Errorf("invalid state.json; referenced slave not present")
+	}
+
+	slaveURL, err := constructSlaveURL(slave)
+	if err != nil {
+		return nil, err
+	}
+
+	slaveState, err := getSlaveState(slaveURL)
+	if err != nil {
+		return nil, err
+	}
+
+	directory := findDirectory(slaveState, task.FrameworkID, task.ID, task.ExecutorID)
+	if directory == "" {
+		return nil, fmt.Errorf("couldn't locate directory on slave")
+	}
+	return &slaveInfo{Slave: slave, State: slaveState, Directory: directory}, nil
 }
 
 func getMasterRedirect(host string, port int) (string, error) {
@@ -159,7 +270,6 @@ func findApps(state *masterState) map[string]int {
 
 func findSlave(state *masterState, slaveID string) *mstateSlave {
 	for _, slave := range state.Slaves {
-		fmt.Printf("%s = %s\n", slave.ID, slaveID)
 		if slave.ID == slaveID {
 			return slave
 		}
@@ -229,9 +339,8 @@ func findDirectory(sstate *slaveState, frameworkID, taskID, executorID string) s
 	return ""
 }
 
-func download(slaveURL string, resource string, filename string) (string, error) {
-	url := slaveURL + resource
-	resp, err := http.Get(url)
+func download(slaveURL string, filename string) (string, error) {
+	resp, err := http.Get(slaveURL)
 	if err != nil {
 		return "", err
 	}
@@ -242,7 +351,6 @@ func download(slaveURL string, resource string, filename string) (string, error)
 		}
 		return filename, nil
 	}
-
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
