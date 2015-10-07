@@ -17,6 +17,8 @@ const (
 	MasterFlag string = "master"
 	// DurationFlag is how often to poll in seconds
 	DurationFlag string = "duration"
+	// EnvMesosMaster is the MESOS_MASTER env variable
+	EnvMesosMaster string = "MESOS_MASTER"
 )
 
 var rootCmd = &cobra.Command{
@@ -53,7 +55,7 @@ var appsCmd = &cobra.Command{
 
 func main() {
 	rootCmd.PersistentFlags().Bool(StdErrFlag, false, "Output stderr log instead of default stdout")
-	rootCmd.PersistentFlags().StringP(MasterFlag, "m", "", "Mesos Master host:port (eg. 192.168.2.1:5050)")
+	rootCmd.PersistentFlags().StringP(MasterFlag, "m", "", "Mesos Master host:port (eg. 192.168.2.1:5050) or ENV [MESOS_MASTER]")
 	tailCmd.Flags().IntP(DurationFlag, "d", 5, "Log poll time (duration) in seconds")
 	rootCmd.AddCommand(appsCmd, printCmd, tailCmd, fileCmd)
 	rootCmd.Execute()
@@ -134,26 +136,28 @@ func getLogType() LogType {
 func client() *MesosClient {
 	var host string
 	var port = 5050
-	if master, err := rootCmd.PersistentFlags().GetString(MasterFlag); err != nil {
-		printErr(err)
-		os.Exit(1)
-	} else {
-		if master == "" {
+	master, err := rootCmd.PersistentFlags().GetString(MasterFlag);
+
+	if master == "" {
+		if os.Getenv(EnvMesosMaster) == "" {
 			printErr(fmt.Errorf("Must define a Master host and optional port"))
 			os.Exit(1)
 		}
-		if strings.Contains(master, ":") {
-			hp := strings.Split(master, ":")
-			host = hp[0]
-			port, err = strconv.Atoi(hp[1])
-			if err != nil {
-				printErr(err)
-				os.Exit(1)
-			}
-		} else {
-			host = master
-		}
+		master = os.Getenv(EnvMesosMaster)
 	}
+
+	if strings.Contains(master, ":") {
+		hp := strings.Split(master, ":")
+		host = hp[0]
+		port, err = strconv.Atoi(hp[1])
+		if err != nil {
+			printErr(err)
+			os.Exit(1)
+		}
+	} else {
+		host = master
+	}
+
 
 	c, err := NewMesosClient(host, port)
 	if err != nil {
