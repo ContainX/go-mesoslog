@@ -21,6 +21,17 @@ Global Flags
   -m, --master :            - Mesos Master host:port (eg. 192.168.2.1:5050)
 ```
 
+### Binary Installation 
+
+You can download the binaries (ver 0.1)
+
+ * Architecture i386 [ [linux](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_linux_386.tar.gz?direct) / [windows](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_windows_386.zip?direct) / [darwin](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_darwin_386.zip?direct) / [freebsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_freebsd_386.zip?direct) / [openbsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_openbsd_386.zip?direct) ]
+ * Architecture amd64 [ [linux](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_linux_amd64.tar.gz?direct) / [windows](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_windows_amd64.zip?direct) / [darwin](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_darwin_amd64.zip?direct) / [freebsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_freebsd_amd64.zip?direct) / [openbsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_openbsd_amd64.zip?direct) ]
+
+Or by installing via deb packages (ver 0.1)
+
+ * [ [amd64](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_amd64.deb?direct) / [armhf](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_armhf.deb?direct) ]
+
 ### Build and Install the Binaries from Source
 
 Add Go-Mesoslog and its package dependencies to your go `src` directory
@@ -41,7 +52,7 @@ I wrote this quickly in one night to solve a few use cases.  Feel free to fork a
 
 ## Looking for Mesos/Marathon, Kubernetes or ECS deployment strategies?
 
-Checkout my other project [DepCon](https://github.com/gondor/depcon)
+Checkout my other project [go-mesoslog](https://github.com/gondor/go-mesoslog)
 
 ## License
 
