@@ -50,9 +50,9 @@ Ideally in your larger clusters you should be log forwarding via Syslog, GELF, F
 
 I wrote this quickly in one night to solve a few use cases.  Feel free to fork and contribute!
 
-## Looking for Mesos/Marathon, Kubernetes or ECS deployment strategies?
+## Looking for Mesos/Marathon, Kubernetes or ECS deployment in one tool?
 
-Checkout my other project [go-mesoslog](https://github.com/gondor/go-mesoslog)
+Checkout [depcon](https://github.com/gondor/depcon)
 
 ## License
 
