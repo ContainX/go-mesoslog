@@ -1,6 +1,6 @@
 # Go-Mesoslog
 
-[![Build Status](https://travis-ci.org/containx/go-mesoslog.svg)](https://travis-ci.org/containx/go-mesoslog)
+[![Build Status](https://travis-ci.org/ContainX/go-mesoslog.svg)](https://travis-ci.org/ContainX/go-mesoslog)
 
 ## Overview
 
