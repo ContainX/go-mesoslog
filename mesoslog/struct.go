@@ -1,4 +1,4 @@
-package main
+package mesoslog
 
 // LogType - enumeration of STDOUT or STDERR
 type LogType int

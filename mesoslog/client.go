@@ -1,4 +1,4 @@
-package main
+package mesoslog
 
 // Package sandboxfinder helps to look up the sandbox page on the mesos-master
 // where the stdout and stderr streams for a running task can be viewed

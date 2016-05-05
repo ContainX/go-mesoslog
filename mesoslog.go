@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	ml "github.com/ContainX/go-mesoslog/mesoslog"
 	"io"
 	"os"
 	"strconv"
@@ -124,16 +125,16 @@ func listApps(cmd *cobra.Command, args []string) {
 	flushWriter(w)
 }
 
-func getLogType() LogType {
+func getLogType() ml.LogType {
 	if rootCmd.PersistentFlags().Changed(StdErrFlag) {
 		if b, err := rootCmd.PersistentFlags().GetBool(StdErrFlag); err == nil && b {
-			return STDERR
+			return ml.STDERR
 		}
 	}
-	return STDOUT
+	return ml.STDOUT
 }
 
-func client() *MesosClient {
+func client() *ml.MesosClient {
 	var host string
 	var port = 5050
 	master, err := rootCmd.PersistentFlags().GetString(MasterFlag)
@@ -159,7 +160,7 @@ func client() *MesosClient {
 		host = master
 	}
 
-	c, err := NewMesosClient(host, port)
+	c, err := ml.NewMesosClient(host, port)
 	if err != nil {
 		printErr(err)
 		os.Exit(1)
