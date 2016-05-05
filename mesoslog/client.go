@@ -118,6 +118,19 @@ func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error
 	return nil
 }
 
+// GetAppNameForTaskID - Attempts to find the Mesos Application name for the given TaskID
+// {taskID} - the task identifier
+func (c *MesosClient) GetAppNameForTaskID(taskID string) (string, error) {
+	tasks := findTask(c.State, taskID)
+	if tasks != nil {
+		for _, task := range tasks {
+			return task.Name, nil
+		}
+	}
+	return "", fmt.Errorf("application could not be found")
+
+}
+
 func (c *MesosClient) asyncTail(task *mstateTask, s *slaveInfo, lt LogType, duration int) <-chan string {
 	ch := make(chan string)
 	path := fmt.Sprintf("%s/%s", s.Directory, lt.String())
