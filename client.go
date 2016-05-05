@@ -4,6 +4,7 @@ package main
 // where the stdout and stderr streams for a running task can be viewed
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,14 +14,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 	"sync"
-	"bytes"
+	"time"
 )
 
 const (
 	// PageLength is the amount of data we want to consume during log tailing
-	PageLength int = 5000
+	PageLength int    = 5000
 	TailURIFmt string = "http://%s:5051/files/read.json?path=%s&offset=%v&length=%v"
 )
 
@@ -118,7 +118,7 @@ func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error
 	return nil
 }
 
-func (c *MesosClient) asyncTail(task *mstateTask, s *slaveInfo, lt LogType, duration int) <- chan string{
+func (c *MesosClient) asyncTail(task *mstateTask, s *slaveInfo, lt LogType, duration int) <-chan string {
 	ch := make(chan string)
 	path := fmt.Sprintf("%s/%s", s.Directory, lt.String())
 	go func() {
@@ -250,7 +250,7 @@ func findTask(state *masterState, appID string) map[string]*mstateTask {
 	m := make(map[string]*mstateTask)
 	for _, framework := range state.Frameworks {
 		for _, task := range framework.Tasks {
-			if task.Name == appID {
+			if task.Name == appID || task.ID == appID {
 				m[task.ID] = task
 			}
 		}

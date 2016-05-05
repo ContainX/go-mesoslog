@@ -64,8 +64,8 @@ type slaveInfo struct {
 }
 
 type readData struct {
-	Data string `json:"data"`
-	Offset int  `json:"offset"`
+	Data   string `json:"data"`
+	Offset int    `json:"offset"`
 }
 
 // LogOut - struct which holds the result from getting Mesos logs

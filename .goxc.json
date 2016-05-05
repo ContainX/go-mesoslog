@@ -1,0 +1,23 @@
+{
+ "ArtifactsDest": "build",
+ "ConfigVersion": "0.9",
+ "PackageVersion": "0.1",
+ "TaskSettings": {
+  "bintray": {
+   "user": "gondor",
+   "package": "go-mesoslog",
+   "repository": "utils",
+   "subject": "containx"
+  },
+  "publish-github": {
+      "owner": "ContainX",
+      "repository": "go-mesoslog"
+  },
+  "debs": {
+      "metadata": {
+        "description": "Go-Mesoslog - Print and Tail Mesos logs",
+        "maintainer": "Jeremy Unruh (https://github.com/gondor)"
+      }
+    }
+ }
+}

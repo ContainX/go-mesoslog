@@ -21,28 +21,21 @@ Global Flags
   -m, --master :            - Mesos Master host:port (eg. 192.168.2.1:5050)
 ```
 
-### Binary Installation 
+### Binary Installation
 
-You can download the binaries (ver 0.1)
-
- * Architecture i386 [ [linux](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_linux_386.tar.gz?direct) / [windows](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_windows_386.zip?direct) / [darwin](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_darwin_386.zip?direct) / [freebsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_freebsd_386.zip?direct) / [openbsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_openbsd_386.zip?direct) ]
- * Architecture amd64 [ [linux](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_linux_amd64.tar.gz?direct) / [windows](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_windows_amd64.zip?direct) / [darwin](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_darwin_amd64.zip?direct) / [freebsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_freebsd_amd64.zip?direct) / [openbsd](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_openbsd_amd64.zip?direct) ]
-
-Or by installing via deb packages (ver 0.1)
-
- * [ [amd64](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_amd64.deb?direct) / [armhf](https://dl.bintray.com//content/pacesys/utils/go-mesoslog_0.1_armhf.deb?direct) ]
+Binaries are available through GitHub releases.  You can download the appropriate binary, package and version from the [Releases](https://github.com/ContainX/go-mesoslog/releases) page
 
 ### Build and Install the Binaries from Source
 
 Add Go-Mesoslog and its package dependencies to your go `src` directory
 
-    go get -v github.com/gondor/go-mesoslog
+    go get -v github.com/ContainX/go-mesoslog
 
 Once the `get` has completed, you should find your new `go-mesoslog` (or `go-mesoslog.exe`) executable sitting inside the `$GOPATH/bin/`
 
 To update Go-Mesoslog's dependencies, use `go get` with the `-u` option.
 
-    go get -u -v github.com/gondor/go-mesoslog
+    go get -u -v github.com/ContainX/go-mesoslog
 
 ## Why Go-Mesoslog
 
@@ -52,13 +45,13 @@ I wrote this quickly in one night to solve a few use cases.  Feel free to fork a
 
 ## Looking for Mesos/Marathon, Kubernetes or ECS deployment in one tool?
 
-Checkout [depcon](https://github.com/gondor/depcon)
+Checkout [depcon](https://github.com/ContainX/depcon)
 
 ## License
 
 This software is licensed under the Apache 2 license, quoted below.
 
-Copyright 2015 Jeremy Unruh
+Copyright 2016 ContainX / Jeremy Unruh
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not
 use this file except in compliance with the License. You may obtain a copy of

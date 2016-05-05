@@ -136,7 +136,7 @@ func getLogType() LogType {
 func client() *MesosClient {
 	var host string
 	var port = 5050
-	master, err := rootCmd.PersistentFlags().GetString(MasterFlag);
+	master, err := rootCmd.PersistentFlags().GetString(MasterFlag)
 
 	if master == "" {
 		if os.Getenv(EnvMesosMaster) == "" {
@@ -144,6 +144,7 @@ func client() *MesosClient {
 			os.Exit(1)
 		}
 		master = os.Getenv(EnvMesosMaster)
+		//		master = "internal-lt-mesos-privatee-mw3lkjkwdyni-213084364.us-west-2.elb.amazonaws.com:5050"
 	}
 
 	if strings.Contains(master, ":") {
@@ -157,7 +158,6 @@ func client() *MesosClient {
 	} else {
 		host = master
 	}
-
 
 	c, err := NewMesosClient(host, port)
 	if err != nil {
