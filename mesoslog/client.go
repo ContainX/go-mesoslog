@@ -97,12 +97,12 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 
 	sort.Sort(SortTasksByLatestTimestamp(tasks))
 
-	if c.Options.ShowLatestOnly {
-		tasks = tasks[:1]
-	}
-
 	if tasks == nil || len(tasks) == 0 {
 		return nil, fmt.Errorf("application could not be found")
+	}
+
+	if c.Options.ShowLatestOnly {
+		tasks = tasks[:1]
 	}
 
 	for _, task := range tasks {
@@ -172,6 +172,24 @@ func (c *MesosClient) GetAppNameForTaskID(taskID string) (string, error) {
 	}
 	return "", fmt.Errorf("application could not be found")
 
+}
+
+func (c *MesosClient) GetAppNameForPath(path string) string {
+	pathArr := strings.Split(path, "/")
+	if strings.HasPrefix(path, "/") {
+		pathArr = pathArr[1:]
+	}
+
+	rpath := reversePath(pathArr)
+	return strings.Join(rpath, ".")
+}
+
+func reversePath(s []string) []string {
+	for i := 0; i < len(s)/2; i++ {
+		j := len(s) - i - 1
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }
 
 func (c *MesosClient) asyncTail(task *mstateTask, s *slaveInfo, lt LogType, duration int) <-chan string {
