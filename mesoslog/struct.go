@@ -24,8 +24,14 @@ type masterState struct {
 	Slaves     []*mstateSlave     `json:"slaves"`
 }
 
+type taskInfo struct {
+	Tasks          []*mstateTask
+	CompletedTasks []*mstateTask
+}
+
 type mstateFramework struct {
-	Tasks []*mstateTask `json:"tasks"`
+	Tasks          []*mstateTask `json:"tasks"`
+	CompletedTasks []*mstateTask `json:"completed_tasks"`
 }
 
 type mstateSlave struct {
@@ -35,11 +41,19 @@ type mstateSlave struct {
 }
 
 type mstateTask struct {
-	ID          string `json:"id"`
-	FrameworkID string `json:"framework_id"`
-	ExecutorID  string `json:"executor_id"`
-	SlaveID     string `json:"slave_id"`
-	Name        string `json:"name"`
+	ID            string              `json:"id"`
+	FrameworkID   string              `json:"framework_id"`
+	ExecutorID    string              `json:"executor_id"`
+	SlaveID       string              `json:"slave_id"`
+	Name          string              `json:"name"`
+	Statuses      []*mstateTaskStatus `json:"statuses"`
+	LastTimestamp float64             `json:"-"`
+	LastState     string              `json:"-"`
+}
+
+type mstateTaskStatus struct {
+	State     string  `json:"state"`
+	Timestamp float64 `json:"timestamp"`
 }
 
 type slaveState struct {
@@ -48,8 +62,9 @@ type slaveState struct {
 }
 
 type sstateFramework struct {
-	ID        string            `json:"id"`
-	Executors []*sstateExecutor `json:"executors"`
+	ID                 string            `json:"id"`
+	Executors          []*sstateExecutor `json:"executors"`
+	CompletedExecutors []*sstateExecutor `json:"completed_executors"`
 }
 
 type sstateExecutor struct {
@@ -77,4 +92,11 @@ type LogOut struct {
 	TaskID string
 	// Log - filename of the outputted log when in download more or RAW log if request is to print to stdout
 	Log string
+}
+
+func (t *mstateTask) UpdateLastState(state *mstateTaskStatus) {
+	if state != nil {
+		t.LastState = state.State
+		t.LastTimestamp = state.Timestamp
+	}
 }

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	ml "github.com/ContainX/go-mesoslog/mesoslog"
+	"github.com/spf13/cobra"
 	"io"
 	"os"
 	"strconv"
@@ -14,6 +14,11 @@ import (
 const (
 	// StdErrFlag is a flag to output stderr logs vs stdout if true
 	StdErrFlag string = "stderr"
+	// CompletedFlag is a flag to output completed tasks if true
+	CompletedFlag string = "completed"
+	// LatestFlag is a flag to only capture the latest instance.
+	// This applies to completed and non-completed tasks
+	LatestFlag string = "latest"
 	// MasterFlag is the mesos master host:port flag
 	MasterFlag string = "master"
 	// DurationFlag is how often to poll in seconds
@@ -56,6 +61,8 @@ var appsCmd = &cobra.Command{
 
 func main() {
 	rootCmd.PersistentFlags().Bool(StdErrFlag, false, "Output stderr log instead of default stdout")
+	printCmd.PersistentFlags().Bool(CompletedFlag, false, "Use completed tasks (default: running tasks)")
+	printCmd.PersistentFlags().Bool(LatestFlag, false, "Use the latest instance only")
 	rootCmd.PersistentFlags().StringP(MasterFlag, "m", "", "Mesos Master host:port (eg. 192.168.2.1:5050) or ENV [MESOS_MASTER]")
 	tailCmd.Flags().IntP(DurationFlag, "d", 5, "Log poll time (duration) in seconds")
 	rootCmd.AddCommand(appsCmd, printCmd, tailCmd, fileCmd)
@@ -69,7 +76,10 @@ func printLog(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	logs, err := client().GetLog(args[0], getLogType(), "")
+	completed, _ := cmd.Flags().GetBool(CompletedFlag)
+	latest, _ := cmd.Flags().GetBool(LatestFlag)
+
+	logs, err := client(&ml.MesosClientOptions{SearchCompletedTasks: completed, ShowLatestOnly: latest}).GetLog(args[0], getLogType(), "")
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 		return
@@ -87,8 +97,9 @@ func tailLog(cmd *cobra.Command, args []string) {
 		fmt.Println("ERROR: An [appId] must be specified")
 		return
 	}
+
 	duration, _ := cmd.Flags().GetInt(DurationFlag)
-	err := client().TailLog(args[0], getLogType(), duration)
+	err := client(nil).TailLog(args[0], getLogType(), duration)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 		return
@@ -101,7 +112,9 @@ func fileLog(cmd *cobra.Command, args []string) {
 		fmt.Println("ERROR: An [appId] and [output_dir] must be specified")
 		return
 	}
-	logs, err := client().GetLog(args[0], getLogType(), args[1])
+
+	completed, _ := cmd.Flags().GetBool(CompletedFlag)
+	logs, err := client(&ml.MesosClientOptions{SearchCompletedTasks: completed}).GetLog(args[0], getLogType(), args[1])
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 		return
@@ -112,7 +125,7 @@ func fileLog(cmd *cobra.Command, args []string) {
 }
 
 func listApps(cmd *cobra.Command, args []string) {
-	apps, err := client().GetAppNames()
+	apps, err := client(nil).GetAppNames()
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 		return
@@ -134,7 +147,7 @@ func getLogType() ml.LogType {
 	return ml.STDOUT
 }
 
-func client() *ml.MesosClient {
+func client(options *ml.MesosClientOptions) *ml.MesosClient {
 	var host string
 	var port = 5050
 	master, err := rootCmd.PersistentFlags().GetString(MasterFlag)
@@ -145,7 +158,6 @@ func client() *ml.MesosClient {
 			os.Exit(1)
 		}
 		master = os.Getenv(EnvMesosMaster)
-		//		master = "internal-lt-mesos-privatee-mw3lkjkwdyni-213084364.us-west-2.elb.amazonaws.com:5050"
 	}
 
 	if strings.Contains(master, ":") {
@@ -160,7 +172,7 @@ func client() *ml.MesosClient {
 		host = master
 	}
 
-	c, err := ml.NewMesosClient(host, port)
+	c, err := ml.NewMesosClientWithOptions(host, port, options)
 	if err != nil {
 		printErr(err)
 		os.Exit(1)

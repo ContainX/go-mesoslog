@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -30,22 +31,46 @@ type MesosClient struct {
 	Port      int
 	MasterURL string
 	State     *masterState
+	Options   *MesosClientOptions
+}
+
+type MesosClientOptions struct {
+	SearchCompletedTasks bool
+	ShowLatestOnly       bool
 }
 
 // NewMesosClient - Creates a new MesosClient
 // {host} - the host/ip of the mesos master node
 // {port} - the port # of the mesos master node
 func NewMesosClient(host string, port int) (*MesosClient, error) {
+	return NewMesosClientWithOptions(host, port, nil)
+}
+
+// NewMesosClient - Creates a new MesosClient
+// {host} - the host/ip of the mesos master node
+// {port} - the port # of the mesos master node
+// {options} - client options - optional
+func NewMesosClientWithOptions(host string, port int, options *MesosClientOptions) (*MesosClient, error) {
 	masterURL, err := getMasterRedirect(host, port)
 	if err != nil {
 		return nil, err
+	}
+
+	if options == nil {
+		options = &MesosClientOptions{}
 	}
 
 	state, err := getMasterState(masterURL)
 	if err != nil {
 		return nil, err
 	}
-	return &MesosClient{Host: host, Port: port, MasterURL: masterURL, State: state}, nil
+	return &MesosClient{
+		Host:      host,
+		Port:      port,
+		MasterURL: masterURL,
+		State:     state,
+		Options:   options,
+	}, nil
 }
 
 // GetAppNames - List all unique app names aka task names running in the Mesos cluster
@@ -63,13 +88,24 @@ func (c *MesosClient) GetAppNames() (map[string]int, error) {
 // {dir} - optional output dir which is used to download vs stdout
 func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogOut, error) {
 	var result []*LogOut
-	tasks := findTask(c.State, appID)
+
+	taskInfo := findTask(c.State, appID)
+	tasks := taskInfo.Tasks
+	if c.Options.SearchCompletedTasks {
+		tasks = taskInfo.CompletedTasks
+	}
+
+	sort.Sort(SortTasksByLatestTimestamp(tasks))
+
+	if c.Options.ShowLatestOnly {
+		tasks = tasks[:1]
+	}
+
 	if tasks == nil || len(tasks) == 0 {
 		return nil, fmt.Errorf("application could not be found")
 	}
 
 	for _, task := range tasks {
-
 		slaveInfo, err := c.getSlaveInfo(task)
 		if err != nil {
 			return nil, err
@@ -95,7 +131,8 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 // {logtype} - the desired log type STDOUT | STDERR
 // {duration} - poll frequency in seconds
 func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error {
-	tasks := findTask(c.State, appID)
+	tasks := findTask(c.State, appID).Tasks
+
 	if tasks == nil || len(tasks) == 0 {
 		return fmt.Errorf("application could not be found")
 	}
@@ -121,10 +158,16 @@ func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error
 // GetAppNameForTaskID - Attempts to find the Mesos Application name for the given TaskID
 // {taskID} - the task identifier
 func (c *MesosClient) GetAppNameForTaskID(taskID string) (string, error) {
-	tasks := findTask(c.State, taskID)
-	if tasks != nil {
-		for _, task := range tasks {
-			return task.Name, nil
+	ti := findTask(c.State, taskID)
+	if ti != nil {
+		if c.Options.SearchCompletedTasks == false {
+			for _, task := range ti.Tasks {
+				return task.Name, nil
+			}
+		} else {
+			for _, task := range ti.CompletedTasks {
+				return task.Name, nil
+			}
 		}
 	}
 	return "", fmt.Errorf("application could not be found")
@@ -200,6 +243,7 @@ func decorateLog(name, data string) string {
 }
 
 func (c *MesosClient) getSlaveInfo(task *mstateTask) (*slaveInfo, error) {
+
 	slave := findSlave(c.State, task.SlaveID)
 	if slave == nil {
 		return nil, fmt.Errorf("invalid state.json; referenced slave not present")
@@ -215,7 +259,8 @@ func (c *MesosClient) getSlaveInfo(task *mstateTask) (*slaveInfo, error) {
 		return nil, err
 	}
 
-	directory := findDirectory(slaveState, task.FrameworkID, task.ID, task.ExecutorID)
+	directory := findDirectory(slaveState, task, c.Options.SearchCompletedTasks)
+
 	if directory == "" {
 		return nil, fmt.Errorf("couldn't locate directory on slave")
 	}
@@ -259,16 +304,38 @@ func getMasterState(masterURL string) (*masterState, error) {
 	return &mstate, nil
 }
 
-func findTask(state *masterState, appID string) map[string]*mstateTask {
-	m := make(map[string]*mstateTask)
+func findTask(state *masterState, appID string) *taskInfo {
+	taskInfo := &taskInfo{
+		Tasks:          []*mstateTask{},
+		CompletedTasks: []*mstateTask{},
+	}
 	for _, framework := range state.Frameworks {
 		for _, task := range framework.Tasks {
 			if task.Name == appID || task.ID == appID {
-				m[task.ID] = task
+				task.UpdateLastState(findTaskLastState(task))
+				taskInfo.Tasks = append(taskInfo.Tasks, task)
+			}
+		}
+
+		if framework.CompletedTasks != nil {
+			for _, task := range framework.CompletedTasks {
+				if task.Name == appID || task.ID == appID {
+					task.UpdateLastState(findTaskLastState(task))
+					taskInfo.CompletedTasks = append(taskInfo.CompletedTasks, task)
+				}
 			}
 		}
 	}
-	return m
+	return taskInfo
+}
+
+func findTaskLastState(task *mstateTask) *mstateTaskStatus {
+	statuses := task.Statuses
+
+	if statuses != nil && len(statuses) > 0 {
+		return statuses[len(statuses)-1]
+	}
+	return nil
 }
 
 func findApps(state *masterState) map[string]int {
@@ -337,14 +404,20 @@ func getSlaveState(slaveURL *url.URL) (*slaveState, error) {
 	return &sstate, nil
 }
 
-func findDirectory(sstate *slaveState, frameworkID, taskID, executorID string) string {
+func findDirectory(sstate *slaveState, task *mstateTask, completedTasks bool) string {
+
 	for _, framework := range sstate.Frameworks {
-		if framework.ID != frameworkID {
+		if framework.ID != task.FrameworkID {
 			continue
 		}
-		for _, executor := range framework.Executors {
 
-			if executor.ID == executorID || executor.ID == taskID {
+		executors := framework.Executors
+		if completedTasks {
+			executors = framework.CompletedExecutors
+		}
+
+		for _, executor := range executors {
+			if executor.ID == task.ExecutorID || executor.ID == task.ID {
 				return executor.Directory
 			}
 		}
