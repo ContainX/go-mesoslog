@@ -126,7 +126,7 @@ func (c *MesosClient) GetLog(appID string, logtype LogType, dir string) ([]*LogO
 	return result, nil
 }
 
-func (c *MesosClient) TailLogToChannel(appID string, logtype LogType, duration int, target chan<- string) error {
+func (c *MesosClient) TailLogToChannel(appID string, logtype LogType, duration int, target chan<- string, done chan bool) error {
 	tasks := findTask(c.State, appID).Tasks
 
 	if tasks == nil || len(tasks) == 0 {
@@ -145,10 +145,14 @@ func (c *MesosClient) TailLogToChannel(appID string, logtype LogType, duration i
 
 	}
 	output := merge(chans...)
-	for msg := range output {
-		target <- msg
+	for {
+		select {
+		case msg := <-output:
+			target <- msg
+		case <-done:
+			return nil
+		}
 	}
-	return nil
 }
 
 // TailLog - Tails the logs for a [appID]
@@ -158,8 +162,9 @@ func (c *MesosClient) TailLogToChannel(appID string, logtype LogType, duration i
 func (c *MesosClient) TailLog(appID string, logtype LogType, duration int) error {
 
 	target := make(chan string)
+	done := make(chan bool)
 
-	go c.TailLogToChannel(appID, logtype, duration, target)
+	go c.TailLogToChannel(appID, logtype, duration, target, done)
 
 	for msg := range target {
 		fmt.Println(msg)
